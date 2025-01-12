@@ -6,7 +6,7 @@ from evogym import sample_robot
 if __name__ == '__main__':
 
     body, connections = sample_robot((5,5))
-    env = gym.make('Walker-v0', body=body, render_mode='human')
+    env = gym.make('Walker-v0', body=body, render_mode='rgb_array')
     env.reset()
 
     while True:
