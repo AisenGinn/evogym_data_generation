@@ -4,12 +4,13 @@ import shutil
 import random
 import math
 import json
-import sys
 import argparse
-from pathlib import Path
 from typing import List
 
+import sys
+from pathlib import Path
 sys.path.insert(0, os.path.join(Path(__file__).parents[1], "examples"))
+
 from ppo.run import run_ppo
 from ppo.args import add_ppo_args
 import evogym.envs
