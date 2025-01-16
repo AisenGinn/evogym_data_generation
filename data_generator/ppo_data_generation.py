@@ -1,23 +1,20 @@
 import os
-import shutil
 import json
-
 import argparse
-from typing import Optional
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from evogym import sample_robot, hashable
-
-import sys
+from evogym import sample_robot
+from multiprocessing import Pool
 from pathlib import Path
+import sys
+
 sys.path.insert(0, os.path.join(Path(__file__).parents[1], "examples"))
 from ppo.eval import eval_policy
 from ppo.args import add_ppo_args
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data_generator
-
 from ppo_callback import EvalCallback
 
 # List of environment names
@@ -38,22 +35,22 @@ env_names_list = [
     "PlatformJumper-v0",
     "Traverser-v0",
     "Lifter-v0",
-    "Carrier-v0",
-    "Carrier-v1",
-    "Pusher-v0",
-    "Pusher-v1",
-    "BeamToppler-v0",
-    "BeamSlider-v0",
-    "Thrower-v0",
-    "Catcher-v0",
-    "AreaMaximizer-v0",
-    "AreaMinimizer-v0",
-    "WingspanMazimizer-v0",
-    "HeightMaximizer-v0",
-    "Climber-v0",
-    "Climber-v1",
-    "Climber-v2",
-    "BidirectionalWalker-v0",
+    # "Carrier-v0",
+    # "Carrier-v1",
+    # "Pusher-v0",
+    # "Pusher-v1",
+    # "BeamToppler-v0",
+    # "BeamSlider-v0",
+    # "Thrower-v0",
+    # "Catcher-v0",
+    # "AreaMaximizer-v0",
+    # "AreaMinimizer-v0",
+    # "WingspanMazimizer-v0",
+    # "HeightMaximizer-v0",
+    # "Climber-v0",
+    # "Climber-v1",
+    # "Climber-v2",
+    # "BidirectionalWalker-v0",
 ]
 
 def run_and_save_ppo(
@@ -62,20 +59,17 @@ def run_and_save_ppo(
     env_name: str,
     model_save_dir: str,
     model_save_name: str,
-    connections: Optional[np.ndarray] = None,
+    connections: np.ndarray = None,
     seed: int = 42,
-) -> float:
+) -> None:
     """
-    Run ppo and return the best reward achieved during evaluation.
+    Run PPO and save the best model for a given environment.
     """
-    
-    # Parallel environments
     vec_env = make_vec_env(env_name, n_envs=1, seed=seed, env_kwargs={
         'body': body,
         'connections': connections,
     })
-    
-    # Eval Callback
+
     callback = EvalCallback(
         body=body,
         connections=connections,
@@ -88,7 +82,6 @@ def run_and_save_ppo(
         verbose=args.verbose_ppo,
     )
 
-    # Train
     model = PPO(
         "MlpPolicy",
         vec_env,
@@ -109,46 +102,47 @@ def run_and_save_ppo(
         callback=callback,
         log_interval=args.log_interval
     )
-    
-    return callback.best_model
 
-def run_all_envs(args: argparse.Namespace, body, connections, model_save_dir):
-    """Run PPO for all environments in env_names."""
-    for env_name in env_names_list:
-        print(f"\nStarting experiment for environment: {env_name}")
+    best_model_path = os.path.join(model_save_dir, model_save_name)
+    callback.best_model.save(best_model_path)
+    print(f"Saved best model for {env_name} at {best_model_path}")
 
-        # Run GA
-        best_model = run_and_save_ppo(args, body=body, env_name=env_name, model_save_dir=model_save_dir, model_save_name=env_name, connections=connections)
-        best_model.save(os.path.join(model_save_dir, env_name))
-
-        print(f"\nComplete experiment for environment: {env_name}")
+def run_ppo_parallel(args: argparse.Namespace, body: np.ndarray, connections: np.ndarray, env_name: str):
+    """
+    Wrapper function for multiprocessing to run PPO on a single environment.
+    """
+    model_save_dir = os.path.join(args.save_dir, env_name)
+    os.makedirs(model_save_dir, exist_ok=True)
+    run_and_save_ppo(args, body, env_name, model_save_dir, env_name, connections)
 
 if __name__ == "__main__":    
-    
-    # Args
     parser = argparse.ArgumentParser(description='Arguments for PPO script')
     parser.add_argument("--exp_id", type=str, default="0", help="Name of the experiment (default: 0)")
-    parser.add_argument("--env-name", type=str, default='None', help="Name of the environment to run (default: None)")
+    parser.add_argument("--env-name", type=str, default=None, help="Name of the environment to run (default: None)")
     parser.add_argument("--structure_shape", type=int, default=5, help="Shape of the structure (default: (5,5))")
-    parser.add_argument("--run-all", action="store_true", help="Run GA for all environments in env_names")
-    
+    parser.add_argument("--run-all", action="store_true", help="Run PPO for all environments in env_names")
+
     add_ppo_args(parser)
     args = parser.parse_args()
-    
-    # modify args with additional parameters
+
     save_dir = os.path.join("/media/hdd2/saved_data", f"test_ppo_{args.exp_id}/ppo_data_{args.structure_shape}")
     args.save_dir = save_dir
-    args.total_timesteps = 1e5
+    args.total_timesteps = int(1e5)
     args.eval_interval = 1
     body, connections = sample_robot((args.structure_shape, args.structure_shape))
 
     print(args)
 
-    # Run either a single environment or all environments
     if args.run_all:
-        run_all_envs(args,body=body,connections=connections,model_save_dir=args.save_dir)
+        with Pool(processes=16) as pool:  # Adjust the number of processes based on your system
+            pool.starmap(
+                run_ppo_parallel,
+                [(args, body, connections, env_name) for env_name in env_names_list]
+            )
     else:
         if args.env_name is None:
             print("Please provide an environment name with --env-name or use --run-all to run all environments.")
         else:
-            run_and_save_ppo(args)
+            model_save_dir = os.path.join(args.save_dir, args.env_name)
+            os.makedirs(model_save_dir, exist_ok=True)
+            run_and_save_ppo(args, body, args.env_name, model_save_dir, args.env_name, connections)
