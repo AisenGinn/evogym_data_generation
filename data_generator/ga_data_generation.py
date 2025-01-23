@@ -6,6 +6,8 @@ import math
 import json
 import argparse
 from typing import List
+from threading import Thread
+import time
 
 import sys
 from pathlib import Path
@@ -20,10 +22,10 @@ from utils.algo_utils import get_percent_survival_evals, mutate, Structure
 
 # List of environment names
 env_names = [
-    "Walker-v0",
-    "BridgeWalker-v0",
-    "CaveCrawler-v0",
-    "Jumper-v0",
+    # "Walker-v0",
+    # "BridgeWalker-v0",
+    # "CaveCrawler-v0",
+    # "Jumper-v0",
     "Flipper-v0",
     "Balancer-v0",
     "Balancer-v1",
@@ -54,41 +56,6 @@ env_names = [
     "BidirectionalWalker-v0",
 ]
 
-name_dict = {
-    "Walker-v0": "walk:WalkingFlat",
-    "BridgeWalker-v0": "walk:SoftBridge",
-    "CaveCrawler-v0": "walk:Duck",
-    "Jumper-v0": "jump:StationaryJump",
-    "Flipper-v0": "flip:Flipping",
-    "Balancer-v0": "balance:Balance",
-    "Balancer-v1": "balance:BalanceJump",
-    "UpStepper-v0": "traverse:StepsUp",
-    "DownStepper-v0": "traverse:StepsDown",
-    "ObstacleTraverser-v0": "traverse:WalkingBumpy",
-    "ObstacleTraverser-v1": "traverse:WalkingBumpy2",
-    "Hurdler-v0": "traverse:VerticalBarrier",
-    "GapJumper-v0": "traverse:Gaps",
-    "PlatformJumper-v0": "traverse:FloatingPlatform",
-    "Traverser-v0": "traverse:BlockSoup",
-    "Lifter-v0": "manipulate:LiftSmallRect",
-    "Carrier-v0": "manipulate:CarrySmallRect",
-    "Carrier-v1": "manipulate:CarrySmallRectToTable",
-    "Pusher-v0": "manipulate:PushSmallRect",
-    "Pusher-v1": "manipulate:PushSmallRectOnOppositeSide",
-    "BeamToppler-v0": "manipulate:ToppleBeam",
-    "BeamSlider-v0": "manipulate:SlideBeam",
-    "Thrower-v0": "manipulate:ThrowSmallRect",
-    "Catcher-v0": "manipulate:CatchSmallRect",
-    "AreaMaximizer-v0": "change_shape:MaximizeShape",
-    "AreaMinimizer-v0": "change_shape:MinimizeShape",
-    "WingspanMazimizer-v0": "change_shape:MaximizeXShape",
-    "HeightMaximizer-v0": "change_shape:MaximizeYShape",
-    "Climber-v0": "climb:Climb0",
-    "Climber-v1": "climb:Climb1",
-    "Climber-v2": "climb:Climb2",
-    "BidirectionalWalker-v0": "multi_goal:BiWalk"
-}
-
 def run_ga(
     args: argparse.Namespace,
 ):
@@ -105,17 +72,8 @@ def run_ga(
 
     ### MANAGE DIRECTORIES ###
     home_path = os.path.join("/media/hdd2/saved_data", exp_name)
-    results_path = os.path.join("/media/hdd2/saved_data", exp_name, f"{name_dict[env_name]}_results.json")
+    results_path = os.path.join("/media/hdd2/saved_data", exp_name, f"{env_name}_results.json")
     start_gen = 0
-
-    ### INITIALIZE RESULT STORAGE ###
-    results = {f'{env_name}_{name_dict[env_name]}': []}
-    if os.path.exists(results_path):
-        print(f"Loading existing results from {results_path}")
-        with open(results_path, "r") as f:
-            results = json.load(f)
-            start_gen = len(results.get(env_name, []))
-
     ### DEFINE TERMINATION CONDITION ###
 
     is_continuing = False    
@@ -205,10 +163,15 @@ def run_ga(
         generation = start_gen
 
 
+    ### INITIALIZE RESULT STORAGE ###
+    with open(results_path, "w") as f:
+        f.write("[\n")  # Start the array
+
+    ### TRAIN GENERATION ###
     while True:
 
         ### UPDATE NUM SURVIORS ###			
-        percent_survival = get_percent_survival_evals(num_evaluations, max_evaluations)
+        percent_survival = 0.5
         num_survivors = max(2, math.ceil(pop_size * percent_survival))
 
 
@@ -256,20 +219,20 @@ def run_ga(
         group.run_jobs(num_cores)
 
         ### COMPUTE FITNESS, SORT, AND SAVE ###
-        generation_data = []
-        for structure in structures:
-            structure.compute_fitness()
-            generation_data.append({
-                "structure": structure.body.tolist(),
-                "connections": structure.connections.tolist(),
-                "reward": structure.fitness
-            })
-
-        results[f'{env_name}_{name_dict[env_name]}'].append(generation_data)
-
-        # SAVE RESULTS TO FILE
-        with open(results_path, "w") as f:
-            json.dump(results, f, indent=4)
+        # Append results to JSON file
+        with open(results_path, "a") as f:  # Append mode
+            for i, structure in enumerate(structures):
+                result_entry = {
+                    "env_name": env_name,
+                    "structure": structure.body.tolist(),
+                    "connections": structure.connections.tolist(),
+                    "reward": structure.fitness,
+                }
+                json.dump(result_entry, f, indent=4)  # Add each dictionary with optional indentation
+                if num_evaluations < max_evaluations - 1 or i < len(structures) - 1:
+                    f.write(",\n")  # Add a comma between entries except the last one
+                else:
+                    f.write("\n")  # No comma for the last entry
 
         structures = sorted(structures, key=lambda structure: structure.fitness, reverse=True)
 
@@ -285,6 +248,9 @@ def run_ga(
 
          ### CHECK EARLY TERMINATION ###
         if num_evaluations == max_evaluations:
+            # Close the JSON array after all generations
+            with open(results_path, "a") as f:
+                f.write("]\n")  # End the array
             print(f'Trained exactly {num_evaluations} robots')
             return
 
@@ -320,19 +286,46 @@ def run_ga(
 
         generation += 1
 
+def run_single_env(env_name, args):
+    """Run GA for a single environment."""
+    print(f"\nStarting experiment for environment: {env_name}")
+
+    # Create arguments specific to this environment
+    args.exp_name = f'test_ga_{env_name}'
+    args.env_name = env_name
+
+    # Run GA
+    run_ga(args)
+
+    print(f"\nCompleted experiment for environment: {env_name}\n")
+
+
 def run_all_envs(args: argparse.Namespace):
-    """Run GA for all environments in env_names."""
-    for env_name in env_names:
-        print(f"\nStarting experiment for environment: {env_name}")
+    """Run GA for all environments in batches of 4 using threading."""
+    num_threads = 4  # Number of parallel threads
+    batch_size = num_threads  # Run 4 environments at a time
 
-        # Create arguments specific to this environment
-        args.exp_name = f'test_ga_{env_name}'
-        args.env_name = env_name
+    # Split the environments into batches of size `batch_size`
+    for i in range(0, len(env_names), batch_size):
+        batch = env_names[i:i + batch_size]
 
-        # Run GA
-        run_ga(args)
+        print(f"\nStarting batch {i // batch_size + 1} with environments: {batch}")
 
-        print(f"\nCompleted experiment for environment: {env_name}\n")
+        threads = []
+
+        # Launch threads for the current batch
+        for env_name in batch:
+            t = Thread(target=run_single_env, args=(env_name, args))
+            t.start()
+            threads.append(t)
+
+        # Wait for all threads in the batch to complete
+        for t in threads:
+            t.join()
+
+        print(f"\nCompleted batch {i // batch_size + 1}.\n")
+        time.sleep(1)  # Optional: Add a delay between batches
+
 
 if __name__ == "__main__":
     # Set seeds for reproducibility
@@ -344,9 +337,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Arguments for GA script")
     parser.add_argument("--exp-name", type=str, default="test_ga", help="Name of the experiment (default: test_ga)")
     parser.add_argument("--env-name", type=str, default=None, help="Name of the environment to run (default: None)")
-    parser.add_argument("--pop-size", type=int, default=3, help="Population size (default: 3)")
+    parser.add_argument("--pop-size", type=int, default=30, help="Population size (default: 30)")
     parser.add_argument("--structure_shape", type=tuple, default=(5, 5), help="Shape of the structure (default: (5,5))")
-    parser.add_argument("--max-evaluations", type=int, default=6, help="Maximum number of robots to evaluate (default: 6)")
+    parser.add_argument("--max-evaluations", type=int, default=3000, help="Maximum number of robots to evaluate (default: 3000)")
     parser.add_argument("--num-cores", type=int, default=3, help="Number of robots to evaluate simultaneously (default: 3)")
     parser.add_argument("--run-all", action="store_true", help="Run GA for all environments in env_names")
     add_ppo_args(parser)
@@ -361,4 +354,3 @@ if __name__ == "__main__":
             print("Please provide an environment name with --env-name or use --run-all to run all environments.")
         else:
             run_ga(args)
-

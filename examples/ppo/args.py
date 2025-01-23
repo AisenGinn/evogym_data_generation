@@ -11,7 +11,7 @@ def add_ppo_args(parser: argparse.ArgumentParser) -> None:
         '--verbose-ppo', default=1, type=int, help='Verbosity level for PPO: 0 for no output, 1 for info messages (such as device or wrappers used), 2 for debug messages (default: 1)'
     )
     ppo_parser.add_argument(
-        '--learning-rate', default=2.5e-4, type=float, help='Learning rate for PPO (default: 2.5e-4)'
+        '--learning-rate', default=5e-3, type=float, help='Learning rate for PPO (default: 2.5e-4)'
     )
     ppo_parser.add_argument(
         '--n-steps', default=128, type=int, help='The number of steps to run for each environment per update for PPO (i.e. rollout buffer size is n_steps * n_envs where n_envs is number of environment copies running in parallel) (default: 128)'
@@ -41,7 +41,7 @@ def add_ppo_args(parser: argparse.ArgumentParser) -> None:
         '--clip-range', default=0.1, type=float, help='Clipping parameter for PPO (default: 0.1)'
     )
     ppo_parser.add_argument(
-        '--total-timesteps', default=1e6, type=int, help='Total number of timesteps for PPO (default: 1e6)'
+        '--total-timesteps', default=1e3, type=int, help='Total number of timesteps for PPO (default: 1e6)'
     )
     ppo_parser.add_argument(
         '--log-interval', default=50, type=int, help='Episodes before logging PPO (default: 50)'
@@ -56,5 +56,5 @@ def add_ppo_args(parser: argparse.ArgumentParser) -> None:
         '--n-evals', default=1, type=int, help='Number of times to run the environment during each eval (default: 1)'
     )
     ppo_parser.add_argument(
-        '--eval-interval', default=1e5, type=int, help='Number of steps before evaluating PPO model (default: 1e5)'
+        '--eval-interval', default=330, type=int, help='Number of steps before evaluating PPO model (default: 1e5)'
     )
