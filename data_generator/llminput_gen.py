@@ -187,27 +187,16 @@ def main():
 
     env_names = list(task_description_dict.keys()) if args.env_id == "all" else [args.env_id]
     
-    if args.env_id == "all":
-        for env_name in env_names:
-            source_path = os.path.join(args.dat_dir, f"test_ga_{env_name}/{env_name}_results.json")
-            output_path = os.path.join(args.output_dir, f"{env_name}_fc_questions.json")
-            # Load and process data
-            sourcedata = load_data(source_path, args.num_choices)
-            questions = create_questions_context(sourcedata, args.num_choices)
-            # Save questions
-            with open(output_path, 'w') as file:
-                json.dump(questions, file, indent=4)
-            print(f"Questions for {env_name} generated successfully! Saved to {output_path}")
-    else:
-        source_path = os.path.join(args.data_dir, f"test_ga_{args.env_id}/{args.env_id}_results.json")
-        output_path = os.path.join(args.output_dir, f"{args.env_id}_fc_questions.json")
+    for env_name in env_names:
+        source_path = os.path.join(args.data_dir, f"test_ga_{env_name}/{env_name}_results.json")
+        output_path = os.path.join(args.output_dir, f"{env_name}_fc_questions_{args.num_choices}.json")
         # Load and process data
         sourcedata = load_data(source_path, args.num_choices)
         questions = create_questions_context(sourcedata, args.num_choices)
         # Save questions
         with open(output_path, 'w') as file:
             json.dump(questions, file, indent=4)
-        print(f"Questions for {args.env_id} generated successfully! Saved to {output_path}")
+        print(f"Questions for {env_name} generated successfully! Saved to {output_path}")
 
 if __name__ == "__main__":
     main()
