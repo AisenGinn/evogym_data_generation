@@ -21,39 +21,41 @@ import utils.mp_group as mp
 from utils.algo_utils import get_percent_survival_evals, mutate, Structure
 
 # List of environment names
+done_list = ["BridgeWalker-v0", "CaveCrawler-v0", "Jumper-v0"]
+current_process_list = ["Balancer-v1", "Climber-v2", "Thrower-v0", "Carrier-v1"]
 env_names = [
     # "Walker-v0",
     # "BridgeWalker-v0",
     # "CaveCrawler-v0",
     # "Jumper-v0",
-    "Flipper-v0",
-    "Balancer-v0",
+    # "Flipper-v0",
+    # "Balancer-v0",
     "Balancer-v1",
-    "UpStepper-v0",
-    "DownStepper-v0",
-    "ObstacleTraverser-v0",
-    "ObstacleTraverser-v1",
-    "Hurdler-v0",
-    "GapJumper-v0",
-    "PlatformJumper-v0",
-    "Traverser-v0",
-    "Lifter-v0",
-    "Carrier-v0",
+    # "UpStepper-v0",
+    # "DownStepper-v0",
+    # "ObstacleTraverser-v0",
+    # "ObstacleTraverser-v1",
+    # "Hurdler-v0",
+    # "GapJumper-v0",
+    # "PlatformJumper-v0",
+    # "Traverser-v0",
+    # "Lifter-v0",
+    # "Carrier-v0",
     "Carrier-v1",
-    "Pusher-v0",
-    "Pusher-v1",
-    "BeamToppler-v0",
-    "BeamSlider-v0",
+    # "Pusher-v0",
+    # "Pusher-v1",
+    # "BeamToppler-v0",
+    # "BeamSlider-v0",
     "Thrower-v0",
-    "Catcher-v0",
-    "AreaMaximizer-v0",
-    "AreaMinimizer-v0",
-    "WingspanMazimizer-v0",
-    "HeightMaximizer-v0",
-    "Climber-v0",
-    "Climber-v1",
+    # "Catcher-v0",
+    # "AreaMaximizer-v0",
+    # "AreaMinimizer-v0",
+    # "WingspanMazimizer-v0",
+    # "HeightMaximizer-v0",
+    # "Climber-v0",
+    # "Climber-v1",
     "Climber-v2",
-    "BidirectionalWalker-v0",
+    # "BidirectionalWalker-v0",
 ]
 
 def run_ga(
@@ -71,8 +73,8 @@ def run_ga(
     )
 
     ### MANAGE DIRECTORIES ###
-    home_path = os.path.join("/media/hdd2/saved_data", exp_name)
-    results_path = os.path.join("/media/hdd2/saved_data", exp_name, f"{env_name}_results.json")
+    home_path = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name)
+    results_path = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, f"{env_name}_results.json")
     start_gen = 0
     ### DEFINE TERMINATION CONDITION ###
 
@@ -96,10 +98,10 @@ def run_ga(
 
     ### STORE META-DATA ##
     if not is_continuing:
-        temp_path = os.path.join("/media/hdd2/saved_data", exp_name, "metadata.txt")
+        temp_path = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "metadata.txt")
         
         try:
-            os.makedirs(os.path.join("/media/hdd2/saved_data", exp_name))
+            os.makedirs(os.path.join("/media/hdd2/users/changhe/saved_data", exp_name))
         except:
             pass
 
@@ -110,7 +112,7 @@ def run_ga(
         f.close()
 
     else:
-        temp_path = os.path.join("/media/hdd2/saved_data", exp_name, "metadata.txt")
+        temp_path = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "metadata.txt")
         f = open(temp_path, "r")
         count = 0
         for line in f:
@@ -149,7 +151,7 @@ def run_ga(
     else:
         for g in range(start_gen+1):
             for i in range(pop_size):
-                save_path_structure = os.path.join("/media/hdd2/saved_data", exp_name, "generation_" + str(g), "structure", str(i) + ".npz")
+                save_path_structure = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "generation_" + str(g), "structure", str(i) + ".npz")
                 np_data = np.load(save_path_structure)
                 structure_data = []
                 for key, value in np_data.items():
@@ -176,8 +178,8 @@ def run_ga(
 
 
         ### MAKE GENERATION DIRECTORIES ###
-        save_path_structure = os.path.join("/media/hdd2/saved_data", exp_name, "generation_" + str(generation), "structure")
-        save_path_controller = os.path.join("/media/hdd2/saved_data", exp_name, "generation_" + str(generation), "controller")
+        save_path_structure = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "generation_" + str(generation), "structure")
+        save_path_controller = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "generation_" + str(generation), "controller")
         
         try:
             os.makedirs(save_path_structure)
@@ -201,9 +203,9 @@ def run_ga(
         for structure in structures:
 
             if structure.is_survivor:
-                save_path_controller_part = os.path.join("/media/hdd2/saved_data", exp_name, "generation_" + str(generation), "controller",
+                save_path_controller_part = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "generation_" + str(generation), "controller",
                     f"{structure.label}nvidi.zip")
-                save_path_controller_part_old = os.path.join("/media/hdd2/saved_data", exp_name, "generation_" + str(generation-1), "controller",
+                save_path_controller_part_old = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "generation_" + str(generation-1), "controller",
                     f"{structure.prev_gen_label}.zip")
                 
                 print(f'Skipping training for {save_path_controller_part}.\n')
@@ -237,7 +239,7 @@ def run_ga(
         structures = sorted(structures, key=lambda structure: structure.fitness, reverse=True)
 
         #SAVE RANKING TO FILE
-        temp_path = os.path.join("/media/hdd2/saved_data", exp_name, "generation_" + str(generation), "output.txt")
+        temp_path = os.path.join("/media/hdd2/users/changhe/saved_data", exp_name, "generation_" + str(generation), "output.txt")
         f = open(temp_path, "w")
 
         out = ""
