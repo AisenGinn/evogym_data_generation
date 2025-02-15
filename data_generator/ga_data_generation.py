@@ -21,42 +21,22 @@ import utils.mp_group as mp
 from utils.algo_utils import get_percent_survival_evals, mutate, Structure
 
 # List of environment names
-done_list = ["BridgeWalker-v0", "CaveCrawler-v0", "Jumper-v0"]
-current_process_list = ["Balancer-v1", "Climber-v2", "Thrower-v0", "Carrier-v1",
-                        "Walker-v0", "Flipper-v0","Balancer-v0","UpStepper-v0",]
+done_list = ["BridgeWalker-v0", "Carrier-v1", "Jumper-v0", "Walker-v0"]
+current_process_list = ["Balancer-v0", "UpStepper-v0", "GapJumper-v0", "Carrier-v0",]
 
 env_names = [
-    "Walker-v0",
+    # "Walker-v0",
     # "BridgeWalker-v0",
-    # "CaveCrawler-v0",
     # "Jumper-v0",
-    "Flipper-v0",
     "Balancer-v0",
-    #"Balancer-v1",
     "UpStepper-v0",
-    # "DownStepper-v0",
-    # "ObstacleTraverser-v0",
-    # "ObstacleTraverser-v1",
-    # "Hurdler-v0",
-    # "GapJumper-v0",
-    # "PlatformJumper-v0",
-    # "Traverser-v0",
-    # "Lifter-v0",
-    # "Carrier-v0",
+    "GapJumper-v0",
+    "Carrier-v0",
     #"Carrier-v1",
     # "Pusher-v0",
     # "Pusher-v1",
-    # "BeamToppler-v0",
-    # "BeamSlider-v0",
-    #"Thrower-v0",
-    # "Catcher-v0",
-    # "AreaMaximizer-v0",
-    # "AreaMinimizer-v0",
-    # "WingspanMazimizer-v0",
-    # "HeightMaximizer-v0",
     # "Climber-v0",
     # "Climber-v1",
-    #"Climber-v2",
     # "BidirectionalWalker-v0",
 ]
 
