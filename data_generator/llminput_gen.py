@@ -26,7 +26,7 @@ task_description_dict = {
     # "ObstacleTraverser-v1": "The robot walks through very bumpy terrain.",
     # "Hurdler-v0": "The robot walks across terrain with tall obstacles.",
     # "PlatformJumper-v0": "The robot traverses a series of floating platforms at different heights.",
-    "GapJumper-v0": "The robot traverses a series of spaced-out floating platforms all at the same height.",
+    "GapJumper-v0": "The robot traverses a series of floating platforms, each spaced 5 units apart, all at the same height.",
     # "Traverser-v0": "The robot traverses a pit of rigid blocks to get to the other side without sinking into the pit.",
     # "CaveCrawler-v0": "The robot squeezes its way through caves and low-hanging obstacles.",
     
@@ -103,87 +103,125 @@ def load_data(source_path, num_choices=2):
 
     return sourcedata
 
-def create_questions_context(sourcedata, mode="high", description="better", num_choices=2):
+def create_questions_context(sourcedata, mode="easy", description="better", num_choices=2):
     """
     Create questions with the specified number of choices (2 or 4).
-
+    If mode is "high", the choices come from largely separated reward buckets.
+    If mode is "low", each bucket is further subdivided so that the choices are closer in reward.
+    
     Args:
         sourcedata (list): Preprocessed data sorted by reward.
-        num_choices (int): Number of choices per question (default: 2).
-
+        mode (str): "high" or "low" difference in reward values.
+        num_choices (int): Number of choices per question.
+    
     Returns:
         list: A list of dictionaries containing questions.
     """
-    # Split data into evenly sized sublists
-    sub_lists = np.array_split(sourcedata, num_choices)
-    sourcedata = [list(sublist) for sublist in sub_lists]
-    questiondata = [list(items) for items in zip(*sourcedata)]
-
     questions = []
-    for eachquestion in questiondata:
-        question = {"question": None, "choices": None, "correct_answer": None, "reward": None}
-        structure, reward = [], []
-
-        # Ensure the number of choices is exactly `num_choices`
-        while len(eachquestion) > num_choices:
-            eachquestion.pop(random.randint(0, len(eachquestion) - 1))
-
-        # Randomize the order of choices
-        random.shuffle(eachquestion)
-
-        # Extract relevant data
-        task = eachquestion[0]['env_name']
-        for eachoption in eachquestion:
-            structure.append(eachoption['structure'])
-            reward.append(eachoption['reward'])
-
-        # Construct the question
-        question["question"] = f"Which of the following robot structures will perform better in the evogym {task} task?"
-        question["choices"] = structure
-        question["correct_answer"] = reward.index(max(reward))  # Index of the highest reward (best performance)
-        question["reward"] = reward
+    
+    if mode == "hard":
+        # First level: split the sorted data into `num_choices` groups.
+        top_level_groups = np.array_split(sourcedata, num_choices)
+        top_level_groups = [list(group) for group in top_level_groups]
         
-        # Add context
-        question["env_name"] = task
-        question["difficulty"] = difficulty_dict.get(task, "unknown")
-        question["task_description"] = task_description_dict.get(task, "Task description not available.")
-        question["structure_description"] = "The robot structure uses a unified multi-material voxel-based representation. " \
-                                            "The robot is represented as a 5x5 material matrix. The entries of the material matrix " \
-                                            "are integers corresponding to a voxel type from the set {Empty, Rigid, Soft, Horizontal Actuator, Vertical Actuator}. " \
-                                            "0 stands for Empty voxel, 1 stands for Rigid voxel, 2 stands for Soft voxel, 3 stands for Horizontal Actuator voxel, 4 stands for Vertical Actuator voxel. " \
-                                            "All pairs of adjacent voxels are connected to each other."
-        question["actuation_description"] = "A sinusoidal controller is used to generate periodic actuation signals. It controls robot motion with a fixed frequency."
+        # Second level: for each top-level group, further split into `num_choices` sub-groups.
+        subdivided_groups = [np.array_split(group, num_choices) for group in top_level_groups]
+        subdivided_groups = [[list(subgroup) for subgroup in groups] for groups in subdivided_groups]
 
-        questions.append(question)
+        for top_group in subdivided_groups:  # Iterate over each top-level group separately
+            num_subgroups = len(top_group)  # Number of subdivided groups in this top-level group
 
-    return questions
+            # Ensure we have enough different subdivided groups to pick from
+            if num_subgroups < num_choices:
+                continue  # Skip if we don’t have enough groups to form a question
 
+            num_questions_in_round = min(len(subgroup) for subgroup in top_group)  # Min available data
+            for k in range(num_questions_in_round):  # Iterate over available data points
+                choices = [top_group[j][k] for j in range(num_choices)]  # Select one from each subdivided group
 
-def generate_contexts(env_names):
-    """ Generate contextual descriptions for environments. """
-    contexts = []
-    for env in env_names:
-        context = {
-            "key": env,
-            "task description": task_description_dict.get(env, "Task description not available."),
-            "structure description": "The robot structure uses a unified multi-material voxel-based representation. "
-                                    "The robot is represented as a 5x5 material matrix. The entries of the material matrix "
-                                    "are integers corresponding to a voxel type from the set {Empty, Rigid, Soft, Horizontal Actuator, Vertical Actuator}. "
-                                    "0 stands for Empty voxel, 1 stands for Rigid voxel, 2 stands for Soft voxel, 3 stands for Horizontal Actuator voxel, 4 stands for Vertical Actuator voxel. "
-                                    "All pairs of adjacent voxels are connected to each other.",
-            "actuation description": "A sinusoidal controller is used to generate periodic actuation signals. It controls robot motion with a fixed frequency.",                
-        }
-        contexts.append(context)
-    return contexts
+                if len(choices) != num_choices:
+                    continue  # Skip if we don’t have enough choices
+                
+                # Shuffle the choices randomly
+                random.shuffle(choices)
+
+                # Extract task info
+                task = choices[0]['env_name']
+                structures = [choice['structure'] for choice in choices]
+                rewards = [choice['reward'] for choice in choices]
+
+                question = {
+                    "question": f"Which of the following robot structures will perform {description} in the evogym {task} task?",
+                    "choices": structures,
+                    "correct_answer": rewards.index(max(rewards)) if description == "better" else rewards.index(min(rewards)),
+                    "reward": rewards,
+                    "env_name": task,
+                    "difficulty": difficulty_dict.get(task, "unknown"),
+                    "task_description": task_description_dict.get(task, "Task description not available."),
+                    "structure_description": (
+                        "The robot structure uses a unified multi-material voxel-based representation. "
+                        "The robot is represented as a 5x5 material matrix. The entries of the material matrix "
+                        "are integers corresponding to a voxel type from the set {Empty, Rigid, Soft, Horizontal Actuator, Vertical Actuator}. "
+                        "0 stands for Empty voxel, 1 stands for Rigid voxel, 2 stands for Soft voxel, "
+                        "3 stands for Horizontal Actuator voxel, 4 stands for Vertical Actuator voxel. "
+                        "All pairs of adjacent voxels are connected to each other."
+                    ),
+                    "actuation_description": (
+                        "The robot's controller is optimized to maximize task performance by actuating its structure through precise deformation."
+                    )
+                }
+                questions.append(question)
+                
+        return questions
+
+    else:  # mode == "easy"
+        # Original behavior: split data into num_choices groups and zip them.
+        sub_lists = np.array_split(sourcedata, num_choices)
+        sub_lists = [list(sublist) for sublist in sub_lists]
+        questiondata = [list(items) for items in zip(*sub_lists)]
+        
+        for eachquestion in questiondata:
+            # If there are extra items (should not happen), randomly drop extras.
+            while len(eachquestion) > num_choices:
+                eachquestion.pop(random.randint(0, len(eachquestion) - 1))
+            # Randomize the order.
+            random.shuffle(eachquestion)
+            
+            task = eachquestion[0]['env_name']
+            structures = [option['structure'] for option in eachquestion]
+            rewards = [option['reward'] for option in eachquestion]
+            
+            question = {
+                "question": f"Which of the following robot structures will perform {description} in the evogym {task} task?",
+                "choices": structures,
+                "correct_answer": rewards.index(max(rewards)) if description == "better" else rewards.index(min(rewards)),
+                "reward": rewards,
+                "env_name": task,
+                "difficulty": difficulty_dict.get(task, "unknown"),
+                "task_description": task_description_dict.get(task, "Task description not available."),
+                "structure_description": (
+                    "The robot structure uses a unified multi-material voxel-based representation. "
+                    "The robot is represented as a 5x5 material matrix. The entries of the material matrix "
+                    "are integers corresponding to a voxel type from the set {Empty, Rigid, Soft, Horizontal Actuator, Vertical Actuator}. "
+                    "0 stands for Empty voxel, 1 stands for Rigid voxel, 2 stands for Soft voxel, "
+                    "3 stands for Horizontal Actuator voxel, 4 stands for Vertical Actuator voxel. "
+                    "All pairs of adjacent voxels are connected to each other."
+                ),
+                "actuation_description": (
+                    "The robot's controller is optimized to maximize task performance by actuating its structure through precise deformation."
+                )
+            }
+            questions.append(question)
+        return questions
 
 def main():
     parser = argparse.ArgumentParser(description="Generate multiple-choice questions for Evolution Gym environments.")
     parser.add_argument("--env_id", type=str, required=True, help="Specify an environment ID to run a single environment, or 'all' for all environments.")
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
-    parser.add_argument("--mode", type=str, choices=["high", "low"], default="high", help="high or low difference in reward values. (low difference leads to harder questions)")
+    parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="easy", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
     parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_data", help="Path to the data folder.")
-    parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_questions_fc", help="Output path for the generated questions JSON.")
+    parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Output path for the generated questions JSON.")
 
     args = parser.parse_args()
 
@@ -191,10 +229,12 @@ def main():
     
     for env_name in env_names:
         source_path = os.path.join(args.data_dir, f"test_ga_{env_name}/{env_name}_results.json")
-        output_path = os.path.join(args.output_dir, f"{env_name}_QA_{args.mode}_{args.description}_{args.num_choices}.json")
+        output_env_dir = f"{args.output_dir}/{env_name}"
+        os.makedirs(output_env_dir, exist_ok=True)
+        output_path = os.path.join(output_env_dir, f"{env_name}_QA_{args.description}_{args.mode}_{args.num_choices}.json")
         # Load and process data
         sourcedata = load_data(source_path, args.num_choices)
-        questions = create_questions_context(sourcedata, args.mode, args.num_choices)
+        questions = create_questions_context(sourcedata, args.mode, args.description, args.num_choices)
         # Save questions
         with open(output_path, 'w') as file:
             json.dump(questions, file, indent=4)
