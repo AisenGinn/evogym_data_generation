@@ -103,7 +103,7 @@ def load_data(source_path, num_choices=2):
 
     return sourcedata
 
-def create_questions_context(sourcedata, mode="high", num_choices=2):
+def create_questions_context(sourcedata, mode="high", description="better", num_choices=2):
     """
     Create questions with the specified number of choices (2 or 4).
 
@@ -181,6 +181,7 @@ def main():
     parser.add_argument("--env_id", type=str, required=True, help="Specify an environment ID to run a single environment, or 'all' for all environments.")
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
     parser.add_argument("--mode", type=str, choices=["high", "low"], default="high", help="high or low difference in reward values. (low difference leads to harder questions)")
+    parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_data", help="Path to the data folder.")
     parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_questions_fc", help="Output path for the generated questions JSON.")
 
@@ -190,7 +191,7 @@ def main():
     
     for env_name in env_names:
         source_path = os.path.join(args.data_dir, f"test_ga_{env_name}/{env_name}_results.json")
-        output_path = os.path.join(args.output_dir, f"{env_name}_fc_questions_{args.mode}_{args.num_choices}.json")
+        output_path = os.path.join(args.output_dir, f"{env_name}_QA_{args.mode}_{args.description}_{args.num_choices}.json")
         # Load and process data
         sourcedata = load_data(source_path, args.num_choices)
         questions = create_questions_context(sourcedata, args.mode, args.num_choices)
