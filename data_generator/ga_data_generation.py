@@ -21,22 +21,24 @@ import utils.mp_group as mp
 from utils.algo_utils import get_percent_survival_evals, mutate, Structure
 
 # List of environment names
-done_list = ["BridgeWalker-v0", "Carrier-v1", "Jumper-v0", "Walker-v0"]
-current_process_list = ["Balancer-v0", "UpStepper-v0", "GapJumper-v0", "Carrier-v0",]
+done_list = ["BridgeWalker-v0", "Carrier-v1", "Jumper-v0", "Walker-v0","Balancer-v0",
+             "UpStepper-v0","Carrier-v0", "BidirectionalWalker-v0","Climber-v0","Pusher-v0",
+             "Pusher-v1","GapJumper-v0"]
+current_process_list = [ "Climber-v1"]
 
 env_names = [
     # "Walker-v0",
     # "BridgeWalker-v0",
     # "Jumper-v0",
-    "Balancer-v0",
-    "UpStepper-v0",
+    #"Balancer-v0",
+    #"UpStepper-v0",
     "GapJumper-v0",
-    "Carrier-v0",
+    #"Carrier-v0",
     #"Carrier-v1",
     # "Pusher-v0",
     # "Pusher-v1",
     # "Climber-v0",
-    # "Climber-v1",
+    "Climber-v1",
     # "BidirectionalWalker-v0",
 ]
 
@@ -286,7 +288,7 @@ def run_single_env(env_name, args):
 
 def run_all_envs(args: argparse.Namespace):
     """Run GA for all environments in batches of 4 using threading."""
-    num_threads = 4  # Number of parallel threads
+    num_threads = 2  # Number of parallel threads
     batch_size = num_threads  # Run 4 environments at a time
 
     # Split the environments into batches of size `batch_size`

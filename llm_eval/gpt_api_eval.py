@@ -189,7 +189,7 @@ def evaluate_multiple_choice_batch(client, questions, result_path, batch_size=20
         total_correct_count = 0
         total_count = 0        
         iter = 0
-        max_iter = 25
+        max_iter = 50
 
         for batch_start in tqdm(range(0, len(questions), batch_size), total=max_iter):
             if iter == max_iter: break
@@ -242,14 +242,16 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate multiple-choice questions using gpt api.")    
     parser.add_argument("--env_id", type=str, required=True, help="Specify an environment ID to run a single environment, or 'all' for all environments.")
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
-    parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="easy", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
+    parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="hard", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
     parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
+    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="repeat", help="Whether include repeated structure in questions")
+    parser.add_argument("--times", type=int, choices=[1, 2, 3], default=3, help="The number of times of answers.")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Path to the question folder.")
     parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_answers/gpto3mini", help="Output path for the generated answer JSON.")
-    parser.add_argument("--batch", action="store_true", help="Enable batch mode to send 20 questions at once.")
+    #parser.add_argument("--batch", action="store_true", help="Enable batch mode to send 20 questions at once.")
     
     args = parser.parse_args()
-    env_list = ["Walker-v0", "BridgeWalker-v0", "Jumper-v0", "Balancer-v0", "UpStepper-v0", "GapJumper-v0",
+    env_list = ["Walker-v0", "BidirectionalWalker-v0", "Jumper-v0", "Balancer-v0", "UpStepper-v0", "GapJumper-v0",
                 "Carrier-v0", "Carrier-v1", "Pusher-v0", "Pusher-v1", "Climber-v0", "Climber-v1"]
 
     env_names = env_list if args.env_id == "all" else [args.env_id]
@@ -259,17 +261,13 @@ def main():
     client = init_gpt_client(api_key)
             
     for env_name in env_names:
-        source_QA_path = os.path.join(args.data_dir, f"{env_name}/{env_name}_QA_{args.description}_{args.mode}_{args.num_choices}.json")
+        source_QA_path = os.path.join(args.data_dir, f"{env_name}/{env_name}_QA_{args.description}_{args.mode}_{args.num_choices}_{args.recur}.json")
         output_env_dir = f"{args.output_dir}/{env_name}"
         os.makedirs(output_env_dir, exist_ok=True)
         # Evaluate questions
         questions = load_and_prepare_questions(source_QA_path)        
-        if args.batch:
-            output_ANS_path = os.path.join(output_env_dir, f"{env_name}_Batch_ANS_{args.description}_{args.mode}_{args.num_choices}.json")
-            evaluate_multiple_choice_batch(client, questions, output_ANS_path)
-        else:
-            output_ANS_path = os.path.join(output_env_dir, f"{env_name}_ANS_{args.description}_{args.mode}_{args.num_choices}.json")
-            evaluate_multiple_choice(client, questions, output_ANS_path)
+        output_ANS_path = os.path.join(output_env_dir, f"{env_name}_ANS_{args.description}_{args.mode}_{args.num_choices}_{args.recur}_{args.times}.json")
+        evaluate_multiple_choice_batch(client, questions, output_ANS_path)
 
 if __name__ == "__main__":
     main()

@@ -14,31 +14,16 @@ task_description_dict = {
     "Carrier-v1": "The robot carries a box to a table and places it on the table.",
     "Pusher-v0": "The robot pushes a box initialized in front of it.",
     "Pusher-v1": "The robot pushes or drags a box initialized behind it in the forward direction.",
-    # "Thrower-v0": "The robot throws a box initialized on top of it.",
     
     "Climber-v0": "The robot climbs as high as possible on a vertical wall.",
-    "Climber-v1": "The robot climbs through a vertical channel made of mixed rigid and soft materials.",
-    # "Climber-v2": "The robot climbs through a narrow stepwise channel.",
+    # "Climber-v1": "The robot climbs through a vertical channel made of mixed rigid and soft materials.",
     
     "UpStepper-v0": "The robot climbs up stairs of varying lengths.",
-    # "DownStepper-v0": "The robot climbs down stairs of varying lengths.",
-    # "ObstacleTraverser-v0": "The robot walks across terrain that gets increasingly more bumpy.",
-    # "ObstacleTraverser-v1": "The robot walks through very bumpy terrain.",
-    # "Hurdler-v0": "The robot walks across terrain with tall obstacles.",
-    # "PlatformJumper-v0": "The robot traverses a series of floating platforms at different heights.",
     "GapJumper-v0": "The robot traverses a series of floating platforms, each spaced 5 units apart, all at the same height.",
-    # "Traverser-v0": "The robot traverses a pit of rigid blocks to get to the other side without sinking into the pit.",
-    # "CaveCrawler-v0": "The robot squeezes its way through caves and low-hanging obstacles.",
-    
-    # "AreaMaximizer-v0": "The robot grows to occupy the largest possible surface area.",
-    # "AreaMinimizer-v0": "The robot shrinks to occupy the smallest possible surface area.",
-    # "WingspanMaximizer-v0": "The robot grows to be as wide as possible.",
-    # "HeightMaximizer-v0": "The robot grows to be as tall as possible.",
-    
-    # "Flipper-v0": "The robot flips counter-clockwise as many times as possible on flat terrain.",
+
     "Jumper-v0": "The robot jumps as high as possible in place on flat terrain.",
     "Balancer-v0": "The robot is initialized on top of a thin pole and balances on it.",
-    #"Balancer-v1": "The robot is initialized next to a thin pole, jumps onto it, and balances."
+
 }
 
 difficulty_dict = {
@@ -47,15 +32,8 @@ difficulty_dict = {
     "BridgeWalker-v0": "medium",
     "BidirectionalWalker-v0": "hard",
     "UpStepper-v0": "medium",
-    # "DownStepper-v0": "easy",
-    # "ObstacleTraverser-v0": "medium",
-    # "ObstacleTraverser-v1": "hard",
-    # "Hurdler-v0": "hard",
-    # "PlatformJumper-v0": "hard",
     "GapJumper-v0": "hard",
-    # "Traverser-v0": "hard",
-    # "CaveCrawler-v0": "medium",
-    
+
     # Object Manipulation Tasks
     "Carrier-v0": "medium",
     "Carrier-v1": "hard",
@@ -65,23 +43,14 @@ difficulty_dict = {
     
     # Climbing Tasks
     "Climber-v0": "medium",
-    "Climber-v1": "hard",
-    # "Climber-v2": "very hard",
-    
-    # Growth Tasks
-    # "AreaMaximizer-v0": "medium",
-    # "AreaMinimizer-v0": "medium",
-    # "WingspanMaximizer-v0": "hard",
-    # "HeightMaximizer-v0": "hard",
+    # "Climber-v1": "hard",
     
     # Balance and Jumping Tasks
-    #"Flipper-v0": "medium",
     "Jumper-v0": "medium",
     "Balancer-v0": "hard",
-    #"Balancer-v1": "very hard",
 }
 
-def load_data(source_path, num_choices=2):
+def load_data(source_path, recur, num_choices=2):
     """
     Load and preprocess the data.
     
@@ -90,7 +59,7 @@ def load_data(source_path, num_choices=2):
         num_choices (int): Number of choices per question (default: 2).
     
     Returns:
-        list: Preprocessed data sorted by reward.
+        list: Preprocessed data sorted by reward with duplicate 5x5 structures removed.
     """
     with open(source_path, 'r') as file:
         sourcedata = json.load(file)
@@ -100,6 +69,18 @@ def load_data(source_path, num_choices=2):
 
     # Ensure the data length is a multiple of num_choices
     sourcedata = sourcedata[:len(sourcedata) - (len(sourcedata) % num_choices)]
+    
+    if recur == "norepeat":
+        # Remove entries with duplicate 5x5 structures
+        seen_structures = set()
+        unique_data = []
+        for entry in sourcedata:
+            # Convert the 5x5 structure (list of lists) to a tuple of tuples (hashable)
+            structure_tuple = tuple(tuple(row) for row in entry["structure"])
+            if structure_tuple not in seen_structures:
+                seen_structures.add(structure_tuple)
+                unique_data.append(entry)
+        return unique_data
 
     return sourcedata
 
@@ -220,6 +201,7 @@ def main():
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
     parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="easy", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
     parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
+    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="repeat", help="Whether include repeated structure in questions")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_data", help="Path to the data folder.")
     parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Output path for the generated questions JSON.")
 
@@ -231,9 +213,9 @@ def main():
         source_path = os.path.join(args.data_dir, f"test_ga_{env_name}/{env_name}_results.json")
         output_env_dir = f"{args.output_dir}/{env_name}"
         os.makedirs(output_env_dir, exist_ok=True)
-        output_path = os.path.join(output_env_dir, f"{env_name}_QA_{args.description}_{args.mode}_{args.num_choices}.json")
+        output_path = os.path.join(output_env_dir, f"{env_name}_QA_{args.description}_{args.mode}_{args.num_choices}_{args.recur}.json")
         # Load and process data
-        sourcedata = load_data(source_path, args.num_choices)
+        sourcedata = load_data(source_path, args.recur, args.num_choices)
         questions = create_questions_context(sourcedata, args.mode, args.description, args.num_choices)
         # Save questions
         with open(output_path, 'w') as file:

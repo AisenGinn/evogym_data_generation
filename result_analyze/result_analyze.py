@@ -3,9 +3,12 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import re
+import os
 
 with open("/home/changhe/MMLU-Pro/walker-v0/question_fc.json", 'r') as file:
     questions = json.load(file)
+
+save_dir = "/home/changhe/evogym/result_analyze"
 
 def draw_diffvresult():
     with open("/home/changhe/MMLU-Pro/walker-v0/results32B_worser.txt", "r", encoding="utf-8") as file:
@@ -43,9 +46,51 @@ def draw_reward_diff():
     plt.ylabel('Reward Difference')
     plt.savefig("/home/changhe/MMLU-Pro/result_analyze/reward_difference_fc.png", dpi=300, bbox_inches='tight')
 
+def get_acc():
+    accuracy_dict = {}
+    base_folder = "/media/hdd2/users/changhe/saved_answers/gpto3mini"
+    for subfolder in os.listdir(base_folder):
+        subfolder_path = os.path.join(base_folder, subfolder)
+        if not os.path.isdir(subfolder_path):
+            continue
+        
+        for filename in os.listdir(subfolder_path):
+            if "Batch_ANS_better_easy_2_default_repeat" in filename:
+                file_path = os.path.join(subfolder_path, filename)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        if isinstance(data, list) and data:
+                            last_item = data[-1]
+                            accuracy_str = last_item.get("accuracy")
+                            match = re.search(r"\d+", accuracy_str)
+                            if match:
+                                accuracy = int(match.group())
+                                accuracy_dict[subfolder] = accuracy
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+    sorted_items = sorted(accuracy_dict.items(), key=lambda x: x[1], reverse=True)
+    labels, values = zip(*sorted_items)
+
+    print(labels, values)
+
+    plt.figure(figsize=(12, 6))
+    bar = plt.bar(labels, values, color='#0076B5')
+    plt.bar_label(bar, fmt='%d', padding=3)
+    plt.xlabel("Environments")
+    plt.ylabel("Accuracy(%)")
+    #plt.title("acc_Batch_ANS_better_easy_2_default_norepeat")
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(f"{save_dir}/acc_Batch_ANS_better_easy_2_default_repeat.png", dpi=300, bbox_inches='tight')
+
+
+
 def main():
-    draw_reward_diff()
+    #draw_reward_diff()
     #draw_diffvresult()
+    get_acc()
 
 if __name__ == "__main__":
     main()

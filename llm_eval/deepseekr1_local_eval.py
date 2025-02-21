@@ -76,26 +76,32 @@ def load_and_prepare_questions(file_path):
 
 #     return thinking_part, final_answer
 
-def extract_thinking_and_answer(raw_output):
+def extract_thinking_and_answer(text):
     """
     Extracts the reasoning part and the final answer from the raw output.
     Ensures the answer is case-insensitive.
     """
-    raw_output = raw_output.strip()
-    lower_output = raw_output.lower()  # Convert to lowercase
-
-    # Look for the pattern "the answer is X"
-    if "the answer is " in lower_output:
-        parts = lower_output.split("the answer is ")
-        thinking_part = parts[0].strip()  # Extract reasoning before answer
-        final_answer = parts[1].strip()[0].upper()  # Extract first letter and standardize to uppercase
-        
+# Try to split the text by the '</think>' tag.
+    parts = text.split('</think>', 1)
+    if len(parts) > 1:
+        # If the tag exists, assign the parts accordingly.
+        thinking_part = parts[0].strip()
+        answer_section = parts[1].strip()
     else:
-        thinking_part = raw_output
-        final_answer = None  # If no valid answer is found
-    return thinking_part, ANSWER_DICT[final_answer]
-
+        # If the tag doesn't exist, use the entire text for both.
+        thinking_part = text.strip()
+        answer_section = text  # This will allow us to search for the answer sentence in the whole text.
     
+    # Look for the sentence "The answer is X." where X is A or B.
+    answer_match = re.search(r'The answer is\s+([AB])\.', answer_section)
+    final_answer = answer_match.group(1) if answer_match else None
+    
+    # Convert the extracted answer letter using ANSWER_DICT, if available.
+    final_answer = ANSWER_DICT[final_answer] if final_answer and final_answer in ANSWER_DICT else None
+
+    return thinking_part, final_answer
+
+# def arrange_batch()    
 
 def extract_answers_and_calculate_accuracy(raw_output, batch_questions, total_correct_count, total_count):
     """
@@ -207,6 +213,38 @@ def evaluate_multiple_choice(model, tokenizer, questions, result_path):
         output_file.truncate()  # Remove last comma
         output_file.write(b"\n]")  # Close the JSON list  
 
+def extract_answers_and_calculate_accuracy(raw_output, batch_questions, total_correct_count, total_count):
+
+    # Extract the list of answers from the response
+    answer_list = ast.literal_eval(raw_output.strip())  # Convert string to list
+    if not isinstance(answer_list, list) or len(answer_list) != len(batch_questions):
+        raise ValueError("Invalid format: Response is not a list or length mismatch.")
+
+    results = []
+    #correct_count = 0  # Track correct answers
+
+    for i, (answer, question) in enumerate(zip(answer_list, batch_questions)):
+        total_count += 1
+        final_answer = answer.upper()  # Ensure uppercase format
+        correct_answer = ANSWER_DICT[question["correct_answer"]]  # Get correct letter
+        
+        is_correct = (final_answer == correct_answer)
+        total_correct_count += int(is_correct)
+        accuracy = total_correct_count / total_count
+
+        result_dict = {
+            #"question_id": question["question_id"],
+            "final_answer": final_answer,
+            "correct_answer": correct_answer,
+            "accuracy": f"{accuracy * 100:.2f}%"
+        }
+
+        results.append(result_dict)
+    #print(results)
+    #overall_accuracy = correct_count / len(batch_questions)  # Calculate batch accuracy
+    return results, total_correct_count, total_count
+
+
 def evaluate_multiple_choice_batch(model, tokenizer, questions, result_path, batch_size=20):
     """
     Evaluate the model in batches on multiple-choice questions and log outputs.
@@ -218,15 +256,15 @@ def evaluate_multiple_choice_batch(model, tokenizer, questions, result_path, bat
         total_count = 0
         iter = 0
         for batch_start in tqdm(range(0, len(questions), batch_size), total=iter):
-            if iter == 50: break
+            if iter == 10: break
             batch_questions = questions[batch_start: batch_start + batch_size]
-            prompts = None
+            prompt = ""
 
             for index, q in enumerate(batch_questions):
                 choices_text = "\n".join([f"{ANSWER_DICT[i]}: {choice}" for i, choice in enumerate(q["choices"])])
                 prompt = prompt + f"{index+1}: {q['question']}\nChoices:\n{choices_text}\n"
                 
-            prompt = prompt + "Here are 20 questions, answer all of them and return the letter choice answers in a Python list format without any other text."
+            prompt = prompt + "Here are 20 questions, answer all of them and return the letter choice answers in a Python list format without any other text. Give each answer with \"The answer is X\" where X is the correct letter choice.[/INST]."
 
             
             # total_count += 1
@@ -249,23 +287,30 @@ def evaluate_multiple_choice_batch(model, tokenizer, questions, result_path, bat
             thinking_part, final_answer = extract_thinking_and_answer(raw_output)
             correct_answer = q["correct_answer"]
 
-            # Update correct count and calculate accuracy
-            is_correct = (final_answer == correct_answer)
-            correct_count += int(is_correct)
-            accuracy = correct_count / (index + 1)  # Accuracy up to this step
+            # # Update correct count and calculate accuracy
+            # is_correct = (final_answer == correct_answer)
+            # correct_count += int(is_correct)
+            # accuracy = correct_count / (index + 1)  # Accuracy up to this step
+            #final_answer, correct_count,total_count = extract_answers_and_calculate_accuracy(raw_output, batch_questions, correct_count, total_count)
+            # Save results
+            
+            for result in final_answer:
+                output_file.write(json.dumps(result) + ",\n")
 
-            # Create a result dictionary for this question
-            result_dict = {
-                "question_id": index + 1,
-                "thinking_part": thinking_part,
-                "final_answer": ANSWER_DICT[final_answer] if final_answer is not None else "Invalid",
-                "correct_answer": ANSWER_DICT[correct_answer],
-                "accuracy": f"{accuracy * 100:.2f}%"
-            }
-
-            # Write the dictionary as a JSON line and flush immediately
-            output_file.write(json.dumps(result_dict) + ",\n")
             output_file.flush()
+            break
+            # # Create a result dictionary for this question
+            # result_dict = {
+            #     "question_id": index + 1,
+            #     #"thinking_part": thinking_part,
+            #     "final_answer": ANSWER_DICT[final_answer] if final_answer is not None else "Invalid",
+            #     "correct_answer": ANSWER_DICT[correct_answer],
+            #     "accuracy": f"{accuracy * 100:.2f}%"
+            # }
+
+            # # Write the dictionary as a JSON line and flush immediately
+            # output_file.write(json.dumps(result_dict) + ",\n")
+            # output_file.flush()
 
     # **Fix JSON formatting: Remove last comma and add closing bracket**
     with open(result_path, 'rb+') as output_file:
@@ -306,7 +351,7 @@ def main():
             output_ANS_path = os.path.join(output_env_dir, f"{env_name}_Batch_ANS_{args.description}_{args.mode}_{args.num_choices}.json")
             evaluate_multiple_choice_batch(model, tokenizer, questions, output_ANS_path)
         else:
-            output_ANS_path = os.path.join(output_env_dir, f"{env_name}_ANS_{args.description}_{args.mode}_{args.num_choices}.json")
+            output_ANS_path = os.path.join(output_env_dir, f"{env_name}_ANS_{args.description}_{args.mode}_{args.num_choices}_2.json")
             evaluate_multiple_choice(model, tokenizer, questions, output_ANS_path)
 
 if __name__ == "__main__":
