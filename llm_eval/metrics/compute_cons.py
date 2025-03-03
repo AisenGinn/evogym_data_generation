@@ -80,7 +80,7 @@ def map_question_to_answer_batches(questions, answers, batch_size=20):
 
     return question_to_answer_mapping
 
-def compute_and_save_consistency(question_dir, answer_dir):  
+def compute_and_save_consistency(question_dir, answer_dir, recur):  
     """
     Compute consistency for different environments and save the results as a CSV file.
     
@@ -103,8 +103,8 @@ def compute_and_save_consistency(question_dir, answer_dir):
             continue
         
         # Construct file paths for the easy and hard question JSON files.
-        q_easy_file = os.path.join(q_env_path, f"{env_name}_QA_better_easy_2_repeat.json")
-        q_hard_file = os.path.join(q_env_path, f"{env_name}_QA_better_hard_2_repeat.json")
+        q_easy_file = os.path.join(q_env_path, f"{env_name}_QA_better_easy_2_{recur}.json")
+        q_hard_file = os.path.join(q_env_path, f"{env_name}_QA_better_hard_2_{recur}.json")
         
         # Check if these files exist
         if not os.path.exists(q_easy_file) or not os.path.exists(q_hard_file):
@@ -120,7 +120,7 @@ def compute_and_save_consistency(question_dir, answer_dir):
                 # Collect file paths for the three repeat files
                 repeat_files = [
                     os.path.join(env_path, f) for f in os.listdir(env_path)
-                    if f.endswith(".json") and difficulty in f and any(f"repeat_{i}" in f for i in range(1, 4))
+                    if f.endswith(".json") and difficulty in f and any(f"_{recur}_{i}" in f for i in range(1, 4))
                 ]
 
                 if len(repeat_files) != 3:
@@ -177,18 +177,19 @@ def compute_and_save_consistency(question_dir, answer_dir):
     df = pd.DataFrame(csv_data, columns=["Environment", "Easy Consistency (%)", "Hard Consistency (%)"])
 
     # Save results to CSV
-    output_path = os.path.join(answer_dir, "consistency_results.csv")
+    output_path = os.path.join(answer_dir, f"{recur}_consistency_results.csv")
     df.to_csv(output_path, index=False)
 
     print(f"Consistency results saved to {output_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Compute consistency for different environments.")
-    parser.add_argument("--question_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Path to saved JSON answer files.")    
-    parser.add_argument("--answer_dir", type=str, default="/media/hdd2/users/changhe/saved_answers/gpto3mini", help="Path to saved JSON answer files.") 
+    parser.add_argument("--question_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Path to saved JSON answer files.")
+    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="norepeat", help="Whether include repeated structure in questions")   
+    parser.add_argument("--answer_dir", type=str, default="/media/hdd2/users/changhe/saved_answers/grok2", help="Path to saved JSON answer files.") 
     
     args = parser.parse_args()
-    compute_and_save_consistency(args.question_dir, args.answer_dir)
+    compute_and_save_consistency(args.question_dir, args.answer_dir, args.recur)
 
 if __name__ == "__main__":
     main()

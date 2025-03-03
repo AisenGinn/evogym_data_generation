@@ -15,7 +15,10 @@ ANSWER_DICT = {
 
 # Initialize GPT O3 Mini High API client.
 def init_gpt_client(api_key):
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.x.ai/v1",
+    )
     return client
 
 # Load and prepare questions from a JSON file.
@@ -83,6 +86,7 @@ def extract_answers_and_calculate_accuracy(raw_output, batch_questions, total_co
     """
     try:
         # Extract the list of answers from the response
+        raw_output = re.sub(r"```(?:python)?", "", raw_output).strip()
         answer_list = ast.literal_eval(raw_output.strip())  # Convert string to list
         if not isinstance(answer_list, list) or len(answer_list) != len(batch_questions):
             raise ValueError("Invalid format: Response is not a list or length mismatch.")
@@ -135,7 +139,7 @@ def evaluate_multiple_choice(client, questions, result_path):
             while True:
                 try:
                     response = client.chat.completions.create(
-                        model="o1",  # Ensure the correct model name
+                        model="grok-2-latest",  # Ensure the correct model name
                         messages=[{"role": "user", "content": prompt}]
                     )
 
@@ -205,7 +209,7 @@ def evaluate_multiple_choice_batch(client, questions, result_path, batch_size=20
             while True:
                 try:
                     responses = client.chat.completions.create(
-                        model="o1",
+                        model="grok-2-latest",
                         messages=[{"role": "user", "content": prompt}]
                     )
 
@@ -243,11 +247,11 @@ def main():
     parser.add_argument("--env_id", type=str, required=True, help="Specify an environment ID to run a single environment, or 'all' for all environments.")
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
     parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="easy", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
-    parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
+    parser.add_argument("--description", type=str, choices=["better", "worse"], default="worse", help="ask LLMs to pick better or worse performance choices.")
     parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="norepeat", help="Whether include repeated structure in questions")
     parser.add_argument("--times", type=int, choices=[1, 2, 3], default=1, help="The number of times of answers.")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Path to the question folder.")
-    parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_answers/gpto1", help="Output path for the generated answer JSON.")
+    parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_answers/grok2", help="Output path for the generated answer JSON.")
     #parser.add_argument("--batch", action="store_true", help="Enable batch mode to send 20 questions at once.")
     
     args = parser.parse_args()
@@ -256,8 +260,8 @@ def main():
 
     env_names = env_list if args.env_id == "all" else [args.env_id]
     
-    # initialize gpt api client
-    api_key = "YOUR_API_KEY"  
+    # initialize gpt api client 
+    api_key = "YOUR_API_KEY"
     client = init_gpt_client(api_key)
             
     for env_name in env_names:

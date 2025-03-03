@@ -27,19 +27,18 @@ done_list = ["BridgeWalker-v0", "Carrier-v1", "Jumper-v0", "Walker-v0","Balancer
 current_process_list = [ "Climber-v1"]
 
 env_names = [
-    # "Walker-v0",
-    # "BridgeWalker-v0",
-    # "Jumper-v0",
-    #"Balancer-v0",
-    #"UpStepper-v0",
+    "Walker-v0",
+    "BridgeWalker-v0",
+    "Jumper-v0",
+    "Balancer-v0",
+    "UpStepper-v0",
     "GapJumper-v0",
-    #"Carrier-v0",
-    #"Carrier-v1",
-    # "Pusher-v0",
-    # "Pusher-v1",
-    # "Climber-v0",
-    "Climber-v1",
-    # "BidirectionalWalker-v0",
+    "Carrier-v0",
+    "Carrier-v1",
+    "Pusher-v0",
+    "Pusher-v1",
+    "Climber-v0",
+    "BidirectionalWalker-v0",
 ]
 
 def run_ga(

@@ -136,7 +136,7 @@ def evaluate_multiple_choice(client, questions, result_path):
             while True:
                 try:
                     response = client.models.generate_content(
-                        model="gemini-2.0-flash",  # Ensure the correct model name
+                        model="gemini-1.5-pro",  # Ensure the correct model name
                         contents = prompt
                     )
 
@@ -245,9 +245,9 @@ def main():
     parser.add_argument("--env_id", type=str, required=True, help="Specify an environment ID to run a single environment, or 'all' for all environments.")
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
     parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="easy", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
-    parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
-    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="repeat", help="Whether include repeated structure in questions")
-    parser.add_argument("--times", type=int, choices=[1, 2, 3], default=3, help="The number of times of answers.")
+    parser.add_argument("--description", type=str, choices=["wrose", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
+    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="norepeat", help="Whether include repeated structure in questions")
+    parser.add_argument("--times", type=int, choices=[1, 2, 3], default=1, help="The number of times of answers.")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Path to the question folder.")
     parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_answers/gemini2.0", help="Output path for the generated answer JSON.")
     #parser.add_argument("--batch", action="store_true", help="Enable batch mode to send 20 questions at once.")
@@ -259,7 +259,7 @@ def main():
     env_names = env_list if args.env_id == "all" else [args.env_id]
     
     # initialize gpt api client
-    api_key = "AIzaSyArWmLsYKgBvGrK5_pQ3oCUu6FD1Pqo14g"
+    api_key = "YOUR_API_KEY"
     client = init_gemini_client(api_key)
             
     for env_name in env_names:

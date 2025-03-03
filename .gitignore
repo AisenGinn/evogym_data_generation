@@ -23,3 +23,6 @@ build_scripts
 exported/
 req_ns.txt
 backup/
+result_analyze/
+visualization/
+ablation/

@@ -21,7 +21,7 @@ task_description_dict = {
     "UpStepper-v0": "The robot climbs up stairs of varying lengths.",
     "GapJumper-v0": "The robot traverses a series of floating platforms, each spaced 5 units apart, all at the same height.",
 
-    "Jumper-v0": "The robot jumps as high as possible in place on flat terrain.",
+    #"Jumper-v0": "The robot jumps as high as possible in place on flat terrain.",
     "Balancer-v0": "The robot is initialized on top of a thin pole and balances on it.",
 
 }
@@ -46,7 +46,7 @@ difficulty_dict = {
     # "Climber-v1": "hard",
     
     # Balance and Jumping Tasks
-    "Jumper-v0": "medium",
+    #"Jumper-v0": "medium",
     "Balancer-v0": "hard",
 }
 
@@ -200,8 +200,8 @@ def main():
     parser.add_argument("--env_id", type=str, required=True, help="Specify an environment ID to run a single environment, or 'all' for all environments.")
     parser.add_argument("--num_choices", type=int, choices=[2, 4], default=2, help="Number of choices per question (2 or 4).")
     parser.add_argument("--mode", type=str, choices=["easy", "hard"], default="easy", help="difficulty level of the questions. Easy choices will have larger differences in reward values.")
-    parser.add_argument("--description", type=str, choices=["better", "worse"], default="better", help="ask LLMs to pick better or worse performance choices.")
-    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="repeat", help="Whether include repeated structure in questions")
+    parser.add_argument("--description", type=str, choices=["better", "worse"], default="worse", help="ask LLMs to pick better or worse performance choices.")
+    parser.add_argument("--recur", type=str, choices=["repeat", "norepeat"], default="norepeat", help="Whether include repeated structure in questions")
     parser.add_argument("--data_dir", type=str, default="/media/hdd2/users/changhe/saved_data", help="Path to the data folder.")
     parser.add_argument("--output_dir", type=str, default="/media/hdd2/users/changhe/saved_questions", help="Output path for the generated questions JSON.")
 
