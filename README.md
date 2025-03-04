@@ -42,7 +42,7 @@ python data_generator/llminput_gen.py
 - **Model evaluation.**
 To generate answer from LLMs output, change the answer saving path in the files to your desire directory, then run:
 ```bash
-python data_generator/MODEL_NAME_api_eal.py
+python data_generator/MODEL_NAME_api_eval.py
 ```
 
 - **Performance evaluation.**
