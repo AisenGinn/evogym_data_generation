@@ -196,7 +196,7 @@ def main():
     env_names = env_list if args.env_id == "all" else [args.env_id]
     
     # Initialize GPT API client.
-    api_key = "AIzaSyArWmLsYKgBvGrK5_pQ3oCUu6FD1Pqo14g"
+    api_key = "YOUR_API_KEY"
     client = init_gemini_client(api_key)
             
     for env_name in env_names:

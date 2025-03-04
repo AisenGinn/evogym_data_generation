@@ -189,7 +189,7 @@ def main():
     env_names = env_list if args.env_id == "all" else [args.env_id]
     
     # Initialize GPT API client.
-    api_key = "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"  
+    api_key = "YOUR_API_KEY"  
     client = init_gpt_client(api_key)
             
     for env_name in env_names:
