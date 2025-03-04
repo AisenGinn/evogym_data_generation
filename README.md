@@ -45,7 +45,7 @@ To generate answer from LLMs output, change the answer saving path in the files 
 python data_generator/MODEL_NAME_api_eal.py
 ```
 
-- **Performance evaluation**
+- **Performance evaluation.**
 To evaluate the performance of LLMs answer, change the answer saving path in the files to your own path, then run:
 ```bash
 # Accuracy evaluation
