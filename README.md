@@ -27,19 +27,19 @@ pip install google
 ## Usage
 The project includes scripts for data generation and evaluation. Below are instructions to run the key scripts:
 
-- **Data Generation with Genetic Algorithm**
+- **Data Generation with Genetic Algorithm.**
 To generate data using a genetic algorithm, change the data saving path in [ga_data_generation.py](data_generator/ga_data_generation.py) to your desire directory, then run:
 ```bash
 python data_generator/ga_data_generation.py
 ```
 
-- **Question generation**
+- **Question generation.**
 To generate question according to the data, change the question saving path in [llminput_gen.py](data_generator/llminput_gen.py) to your desire directory, then run:
 ```bash
 python data_generator/llminput_gen.py
 ```
 
-- **Model evaluation**
+- **Model evaluation.**
 To generate answer from LLMs output, change the answer saving path in the files to your desire directory, then run:
 ```bash
 python data_generator/MODEL_NAME_api_eal.py
